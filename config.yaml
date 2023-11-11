@@ -1,0 +1,41 @@
+server:
+  src_dir: ./
+  port: 10050
+  trigger_mode: 3
+  timeout: 60000
+  opt_linger: true
+  thread:
+    count: 8
+
+sql:
+
+log:
+  format:
+    basic: "[%d] [%p] [T:%t F:%f X:%x] %m%n"
+    complex: "[%c] [message: %m] [level: %p] [thread id: %t] [time: %d{%Y:%m:%d %H:%M:%S}]%n"
+  appender:
+    - name: stdout1
+      level: DEBUG
+      format: basic
+    - name: stdout2
+      level: DEBUG
+      format: complex
+    - name: file1
+      level: DEBUG
+      format: basic
+      filename: file1.log
+    - name: file2
+      level: WARN
+      format: basic
+      filename: file2.log
+    - name: file3
+      level: ERROR
+      format: complex
+      filename: file3.log
+  logger:
+    - name: root
+      level: DEBUG
+      appenders: [stdout1, stdout2, file1]
+    - name: files
+      level: DEBUG
+      appenders: [file2, file3]

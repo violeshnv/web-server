@@ -1,0 +1,5 @@
+target("config")
+    set_kind("static")
+    add_files("*.cc")
+    add_deps("server", "log", "thread", "http", "instance")
+    add_packages("yaml-cpp")
