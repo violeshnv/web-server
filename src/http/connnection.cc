@@ -1,4 +1,5 @@
 #include "http.hh"
+#include "utils.hh"
 
 bool HttpConnection::et;
 std::filesystem::path HttpConnection::base_;
@@ -45,8 +46,7 @@ auto HttpConnection::Write() -> ssize_t
         };
 
         ssize_t len = ::writev(fd_, iov, sizeof(iov) / sizeof(iov[0]));
-        if (len <= 0) return ~errno;
-
+        if (len < 0) return ~errno;
         if (size_t(len) > res_view_.size()) {
             len -= res_view_.size();
             res_view_ = res_view_.subspan(res_view_.size());
@@ -55,7 +55,7 @@ auto HttpConnection::Write() -> ssize_t
             res_view_ = res_view_.subspan(len);
         }
         total_len += len;
-    } while (et || ToWriteBytes() > SWND_SIZE);
+    } while (ToWriteBytes() != 0 && (et || ToWriteBytes() > SWND_SIZE));
 
     LOG_DEBUG("write done");
     return total_len;
@@ -63,21 +63,25 @@ auto HttpConnection::Write() -> ssize_t
 
 void HttpConnection::Close()
 {
-    if (!fd_.IsClosed()) {
-        fd_.Close();
+    if (!closed_) {
+        ::close(fd_);
+        closed_ = true;
         --user_count;
     }
 }
 
 auto HttpConnection::Process() -> bool
 {
-    if (gulp_.empty()) return false;
-    if (!req_.Parse(std::move(gulp_))) {
-        res_.Init(base_.native(), req_.Path(),
-                  HttpCode::Bad_Request, false);
-    } else {
+    req_.Clear();
+    if (gulp_.empty() && req_.Lines().empty()) return false;
+    bool parse_result = gulp_.empty() ? req_.Parse()
+                                      : req_.Parse(std::move(gulp_));
+    if (parse_result) {
         res_.Init(base_.native(), req_.Path(),
                   HttpCode::OK, req_.IsKeepAlive());
+    } else {
+        res_.Init(base_.native(), req_.Path(),
+                  HttpCode::Bad_Request, false);
     }
 
     res_.Compose();

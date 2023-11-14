@@ -45,6 +45,7 @@ public:
         read_.exchange(other.read_);
         write_.exchange(other.write_);
         cow_.exchange(other.cow_);
+        other.reset_();
     }
 
     auto operator=(self&& other) -> self&
@@ -55,6 +56,9 @@ public:
         read_.exchange(other.read_);
         write_.exchange(other.write_);
         cow_.exchange(other.cow_);
+        other.data_ = nullptr;
+        other.len_ = 0;
+        other.reset_();
         return *this;
     }
 
@@ -77,6 +81,7 @@ public:
 
     ~Gulp();
 
+    auto data() { return begin_(); }
     auto size() const -> size_t { return write_ - read_; }
     auto capacity() const -> size_t { return len_ - read_; }
     auto empty() const -> bool { return size() == 0; }
@@ -106,6 +111,8 @@ public:
 private:
     auto begin_() -> iterator { return data_ + read_; }
     auto end_() -> iterator { return data_ + write_; }
+
+    void reset_();
 
     iterator data_;
     size_t len_;

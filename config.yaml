@@ -1,11 +1,11 @@
 server:
-  src_dir: ./
+  src_dir: ./resources/
   port: 10050
   trigger_mode: 3
   timeout: 60000
   opt_linger: true
   thread:
-    count: 8
+    count: 1
 
 sql:
 
@@ -13,10 +13,11 @@ log:
   format:
     basic: "[%d] [%p] [T:%t F:%f X:%x] %m%n"
     complex: "[%c] [message: %m] [level: %p] [thread id: %t] [time: %d{%Y:%m:%d %H:%M:%S}]%n"
+    message: "[message: %m] %T%T%T%T%T%T[%p T:%t F:%f X:%x]%n"
   appender:
     - name: stdout1
       level: DEBUG
-      format: basic
+      format: message
     - name: stdout2
       level: DEBUG
       format: complex
@@ -35,7 +36,10 @@ log:
   logger:
     - name: root
       level: DEBUG
-      appenders: [stdout1, stdout2, file1]
+      appenders: [file1]
+    - name: out
+      level: DEBUG
+      appenders: [stdout1]
     - name: files
       level: DEBUG
       appenders: [file2, file3]

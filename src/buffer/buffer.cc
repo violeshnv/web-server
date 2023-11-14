@@ -6,8 +6,7 @@ Gulp::~Gulp()
 {
     if (cow_) return;
     if (data_) ::free(data_);
-    data_ = nullptr;
-    len_ = read_ = write_ = 0;
+    reset_();
 }
 
 void Gulp::reserve(size_t sz)
@@ -59,6 +58,13 @@ void Gulp::append(std::span<std::byte> span)
     reserve(size() + span.size());
     std::memcpy(end_(), span.data(), span.size());
     write_ += span.size();
+}
+
+void Gulp::reset_()
+{
+    data_ = nullptr;
+    len_ = read_ = write_ = 0;
+    cow_ = false;
 }
 
 Slurp::Slurp(std::string_view path) :

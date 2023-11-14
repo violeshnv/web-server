@@ -14,7 +14,7 @@ add_requires("pq", {system = true})
 
 add_requires("boost", {configs = {fiber = true}})
 
-add_defines("NDEBUG")
+-- add_defines("NDEBUG")
 
 add_includedirs("inc", "src")
 

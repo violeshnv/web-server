@@ -64,6 +64,8 @@ public:
         return name ? name.value() : "<<WHY DID YOU TRY TO REACH HERE?>>";
     }
     constexpr operator int() const { return static_cast<int>(level_); }
+    constexpr auto operator<(LogLevel const& other) const
+        -> bool { return int(*this) < int(other); }
 
 private:
     Level level_;
@@ -273,7 +275,7 @@ public:
     static void Log(LogLevel level, LogEvent::ptr event)
     {
         for (auto const& logger : Instance().Loggers() | std::views::values) {
-            std::cout << logger->Name() << std::endl;
+            // std::cout << logger->Name() << std::endl;
             logger->Log(level, event);
         }
     }

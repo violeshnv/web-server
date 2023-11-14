@@ -11,10 +11,10 @@ const std::unordered_set<std::string_view> HttpRequest::default_html {
 
 void HttpRequest::Clear()
 {
-    raw_data_.clear();
     state_ = ParseState::REQUEST_LINE;
     path_.clear();
     header_.clear();
+    method_ = version_ = body_ = std::string_view();
 }
 
 auto HttpRequest::IsKeepAlive() const -> bool
@@ -28,12 +28,11 @@ auto HttpRequest::IsKeepAlive() const -> bool
 
 auto HttpRequest::Parse_() -> bool
 {
-    auto lines = SliceLines_(raw_data_.view());
-    for (auto& line : lines) {
+    while (!lines_.empty() && state_ != ParseState::FINISH) {
+        auto& line = lines_.front();
         switch (state_) {
         case ParseState::REQUEST_LINE:
-            if (!ParseRequestLine_(line))
-                return false;
+            if (!ParseRequestLine_(line)) return false;
             ParsePath_();
             break;
         case ParseState::HEADERS:
@@ -45,17 +44,18 @@ auto HttpRequest::Parse_() -> bool
         default:
             break;
         }
-        if (state_ == ParseState::FINISH)
-            break;
+
+        lines_.pop_front();
     }
     return true;
 }
 
-auto HttpRequest::SliceLines_(std::string_view view) -> std::vector<std::string_view>
+auto HttpRequest::SliceLines_(std::string_view view)
+    -> std::list<std::string_view>
 {
     constexpr std::string_view CRLF {"\r\n"};
 
-    std::vector<std::string_view> lines;
+    std::list<std::string_view> lines;
     while (true) {
         if (view.starts_with(CRLF)) {
             lines.emplace_back("");

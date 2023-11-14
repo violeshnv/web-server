@@ -12,6 +12,7 @@ const std::unordered_map<std::string_view, std::string_view> HttpResponse::suffi
     {".gif",   "image/gif"            },
     {".jpg",   "image/jpeg"           },
     {".jpeg",  "image/jpeg"           },
+    {".ico",   "image/ico"            },
     {".au",    "audio/basic"          },
     {".mpeg",  "video/mpeg"           },
     {".mpg",   "video/mpeg"           },
@@ -30,8 +31,8 @@ const std::unordered_map<int, std::string_view> HttpResponse::code_path = {
 
 void HttpResponse::Init(std::string_view base, std::string_view path, HttpCode code, bool keep_alive)
 {
-    full_path_ = base;
-    full_path_ /= std::filesystem::path(path).relative_path();
+    base_ = base;
+    full_path_ = base_ / std::filesystem::path(path).relative_path();
 
     code_ = code;
     keep_alive_ = keep_alive;
@@ -39,6 +40,7 @@ void HttpResponse::Init(std::string_view base, std::string_view path, HttpCode c
 
 void HttpResponse::Compose()
 {
+    response_.clear();
     res_lst_.clear();
     slurp_ = Slurp(full_path_.native());
 
@@ -71,7 +73,9 @@ void HttpResponse::ComposeCode_()
 void HttpResponse::Redirect_()
 {
     if (auto find = code_path.find(code_); find != code_path.end()) {
-        slurp_ = Slurp(find->second);
+        auto path = std::filesystem::path(find->second).relative_path();
+        path = base_ / path;
+        slurp_ = Slurp(path.native());
         if (slurp_.error_message()) {
             LOG_ERROR(std::string(slurp_.state_message()) +
                       ": " + slurp_.error_message().value() +

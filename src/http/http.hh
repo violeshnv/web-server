@@ -66,10 +66,15 @@ public:
 
     void Clear();
 
+    auto Parse() -> bool { return Parse_(); }
+
     template <typename U>
     auto Parse(U&& data) -> bool
     {
-        raw_data_ = std::forward<U>(data);
+        if (!std::empty(data)) {
+            raw_data_ = std::forward<U>(data);
+            lines_ = SliceLines_(raw_data_.view());
+        }
         return Parse_();
     }
 
@@ -79,6 +84,7 @@ public:
     auto const& Version() const { return version_; }
     auto const& Header() const { return header_; }
     auto const& Body() const { return body_; }
+    auto const& Lines() const { return lines_; }
 
     auto IsKeepAlive() const -> bool;
 
@@ -86,7 +92,7 @@ private:
     auto Parse_() -> bool;
 
     auto SliceLines_(std::string_view view)
-        -> std::vector<std::string_view>;
+        -> std::list<std::string_view>;
 
     auto ParseRequestLine_(std::string_view& line) -> bool;
 
@@ -102,6 +108,7 @@ private:
     }
 
     Gulp raw_data_;
+    std::list<std::string_view> lines_;
     ParseState state_;
     std::string_view method_, version_, body_;
     std::string path_;
@@ -157,7 +164,7 @@ private:
     std::list<std::string> temp_;
     std::string response_;
 
-    std::filesystem::path full_path_;
+    std::filesystem::path base_, full_path_;
     Slurp slurp_;
 
     HttpCode code_;
@@ -173,31 +180,8 @@ class HttpConnection
     static constexpr size_t SWND_SIZE = 10240;
 
 public:
-    struct FD {
-        int fd_;
-        constexpr FD(int fd) :
-            fd_(fd) { }
-        FD(FD const&) = delete;
-        FD(FD&&) = delete;
-        auto operator=(FD&) = delete;
-        auto operator=(FD&&) = delete;
-        auto operator=(int fd) -> FD&
-        {
-            fd_ = fd;
-            return *this;
-        }
-        ~FD() { Close(); }
-        void Close()
-        {
-            if (!IsClosed()) ::close(fd_);
-            fd_ = -1;
-        }
-        auto IsClosed() -> bool const { return fd_ == -1; }
-        constexpr operator int() const { return fd_; }
-    };
-
     typedef HttpConnection self;
-    typedef std::unique_ptr<self> ptr;
+    typedef std::shared_ptr<self> ptr;
 
     HttpConnection(int fd, ::sockaddr_in const& addr);
 
@@ -221,7 +205,8 @@ public:
     auto IsKeepAlive() const -> bool;
 
 private:
-    FD fd_;
+    int fd_;
+    bool closed_;
     ::sockaddr_in addr_;
 
     Gulp gulp_;
